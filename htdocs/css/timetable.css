@@ -16,3 +16,10 @@
     border: 1px solid rgba(255, 159, 64, 1);
     cursor: pointer; 
 }
+
+.calculation {
+    position: absolute;
+    font-size: 10px;
+    bottom: 0px;
+    left: 0px;
+}

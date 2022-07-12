@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 import json
 from src.util import read_json_list , write_json_list, delete_by_id
+from src.calculate import calculate_statistic
 
 
 app = FastAPI()
@@ -19,6 +20,10 @@ def projects():
 def schedule():
     return read_json_list('./data/schedule.jsonl')
 
+@app.get("/api/calculation")
+def calculation():
+    data = read_json_list('./data/schedule.jsonl')
+    return calculate_statistic(data)
 
 @app.put("/api/update")
 async def update(request: Request):
@@ -30,6 +35,18 @@ async def update(request: Request):
     write_json_list('data/schedule.jsonl',data)
     return timeSpent['id']
 
+
+@app.get("/api/startstop")
+async def set_startstop():
+    with open('data/startstop.json',encoding='utf-8') as f:
+        return json.load(f)
+
+@app.put("/api/startstop")
+async def set_startstop(request: Request):
+    startstop = await request.json()
+    with open("data/startstop.json", "w",encoding='utf-8') as f:
+        json.dump(startstop, f)
+    
 
 @app.get("/api/delete/{id}")
 def update(id: str):

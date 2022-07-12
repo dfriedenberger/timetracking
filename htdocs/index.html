@@ -16,6 +16,8 @@
   <script id="day-template" type="text/x-handlebars">
       <div class="col day" data-date="{{data-date}}">
           <p>{{date}}</p>
+
+          <div class="calculation">-</div>
       </div>
   </script>
 
@@ -47,14 +49,22 @@
       </form>
     </script>
 
+
+    <script id="default-button-template" type="text/x-handlebars">
+      <button type="button" class="btn btn-light add-project" data-start="{{start}}" data-end="{{end}}" data-project="{{projectid}}">
+        {{projectname}} {{start}} - {{end}}
+      </button>
+    </script>
+
   <h1>Stundenprotokollierung</h1>
 
   <div class="container">
-    <div class="buttoms">
+    <div class="buttons">
       <button type="button" id="beforeWeek" class="btn btn-primary"><i class="bi bi-caret-left-fill"></i></button>
       <button type="button" id="nextWeek" class="btn btn-primary"><i class="bi bi-caret-right-fill"></i></button>
-      <button type="button" id="thisWeek" class="btn btn-primary"><i class="bi bi-calendar-event-fill"></i></i></button>
-      
+      <button type="button" id="thisWeek" class="btn btn-primary"><i class="bi bi-calendar-event-fill"></i></button>
+      <button type="button" id="dayStart" class="btn btn-primary"><i class="bi bi-play-circle-fill"></i> <span>--:--</span> </button>
+      <button type="button" id="dayStop" class="btn btn-primary"><i class="bi bi-stop-circle-fill"></i> <span>--:--</span> </button>
     </div>
 
     <div id="table" class="row">
@@ -99,6 +109,17 @@
 
       var sourceFormProjectTemplate = document.getElementById("form-project-template").innerHTML;
       var formProjectTemplate = Handlebars.compile(sourceFormProjectTemplate);
+
+      var sourceDefaultButtonTemplate = document.getElementById("default-button-template").innerHTML;
+      var defaultButtonTemplate = Handlebars.compile(sourceDefaultButtonTemplate);
+
+      //Utils
+      var dateToYMD = function (date) {
+        var d = date.getDate();
+        var m = date.getMonth() + 1; //Month from 0 to 11
+        var y = date.getFullYear();
+        return '' + y + '-' + (m <= 9 ? '0' + m : m) + '-' + (d <= 9 ? '0' + d : d);
+      }
 
 
       //Projects
@@ -160,6 +181,77 @@
       };
 
 
+      //StartStop
+      var startstop = undefined;
+      $.ajax({
+        dataType: "json",
+        url: 'api/startstop',
+        async: false,
+        success: function (data) {
+          if (data.date == dateToYMD(new Date())) 
+          {
+            $("#dayStart").find('span').text(data.start);
+            $("#dayStop").find('span').text(data.stop);
+          }
+        },
+        error: function (data) {
+          console.log("error", data);
+        }
+      });
+
+      var send_startstop = function () {
+
+        var startstop = {
+          "date" : dateToYMD(new Date()),
+          "start" : $("#dayStart").find('span').text(),
+          "stop" : $("#dayStop").find('span').text()
+        };
+
+        $.ajax({
+          url: "/api/startstop",
+          type: "put",
+          dataType: "json",
+          contentType: "application/json",
+          data: JSON.stringify(startstop),
+          success: function (data) {
+          },
+          error: function (data) {
+            console.log("error", data);
+          }
+        });
+      }
+      //Calculation
+      var update_calculation = function () {
+        $.ajax({
+          dataType: "json",
+          url: 'api/calculation',
+          async: false,
+          success: function (data) {
+            for (var date in data) {
+                if (data.hasOwnProperty(date)) {           
+                    part = data[date]['part']
+                    sum = data[date]['sum']
+                    text = "";
+                    for (var p in part) {
+                      if (part.hasOwnProperty(p)) {
+                        prj = get_project(p)
+                        text += prj.name + ": "+part[p] +"h<br>";
+
+                      }
+                    }
+                    text += "Summe: "+sum+"h";
+                    $("#table").find('.day[data-date=' + date + ']').find(".calculation").html(text)
+                }
+            }
+            
+
+          },
+          error: function (data) {
+            console.log("error", data);
+          }
+        });
+      }
+
       var random_id = function () {
         return "x" + Math.floor(Math.random() * 1000000000)
       }
@@ -178,6 +270,20 @@
           case 'new-project':
             options = get_options(projects[0].id);
             modal_body = formProjectTemplate({ 'id': random_id(), 'options': options, 'date': id, 'start': start, 'end': end }); //TODO get start from pixel
+
+            //Add defaults
+            modal_body += '<hr>';
+            starttime = $("#dayStart").find('span').text()
+            stoptime = $("#dayStop").find('span').text()
+            if (starttime == "--:--") starttime == "08:00";
+            if (stoptime == "--:--") stoptime == "17:00";
+            modal_body += defaultButtonTemplate({ "start" : starttime,  "end" : stoptime, 
+                          "projectid" : "prj-stk" , "projectname" : "Streckenkenntnis"});
+
+            modal_body += '<hr>';
+            modal_body += defaultButtonTemplate({ "start" : "14:00",  "end" : "15:00", 
+                          "projectid" : "spanish" , "projectname" : "Spanisch"});
+          
             break;
         }
 
@@ -185,6 +291,19 @@
         $('#exampleModal').find('.modal-body').append(modal_body);
         $('#exampleModal').find('.modal-title').text(func + " " + id);
         $('#exampleModal').modal('show');
+        $('#exampleModal').find('.modal-body').find(".add-project").click(function(ev) {
+          ev.preventDefault();
+
+          var time_spent = {
+            'id': random_id(),
+            'project': $(this).data("project"),
+            'date': id,
+            'start': $(this).data("start"),
+            'end': $(this).data("end")
+          }
+          send_time_spent(time_spent)
+
+        });
       }
 
 
@@ -199,13 +318,6 @@
         const minutes = ((22 - 6) * 60) * ((pixel - 50) / 500) + 6 * 60; //siehe oben
         var h = Math.round(minutes / 60) + offset;
         return (h <= 9 ? '0' + h : h) + ":00"
-      }
-
-      var dateToYMD = function (date) {
-        var d = date.getDate();
-        var m = date.getMonth() + 1; //Month from 0 to 11
-        var y = date.getFullYear();
-        return '' + y + '-' + (m <= 9 ? '0' + m : m) + '-' + (d <= 9 ? '0' + d : d);
       }
 
       var date_str = function (date) {
@@ -227,11 +339,6 @@
         return `${dayName}, ${day}.${month}`
 
       }
-
-
-
-
-
 
       var show_time_spent = function (config) {
 
@@ -255,6 +362,27 @@
         $("#table").find('.day[data-date=' + config.date + ']').append(time_spent);
 
       }
+
+      var send_time_spent = function(time_spent) {
+        $.ajax({
+          url: "/api/update",
+          type: "put",
+          dataType: "json",
+          contentType: "application/json",
+          data: JSON.stringify(time_spent),
+          success: function (data) {
+            show_time_spent(time_spent);
+            remove_time_spent(time_spent.id);
+            schedule.push(time_spent)
+            $('#exampleModal').modal('hide');
+            update_calculation();
+          },
+          error: function (data) {
+            console.log("error", data);
+          }
+        });
+      }
+
 
       var current = undefined;
 
@@ -287,6 +415,7 @@
           show_time_spent(schedule[i]);
         }
 
+        update_calculation();
       }
 
       var get_monday = function() {
@@ -294,7 +423,13 @@
         const first = today.getDate() - today.getDay() + 1;
         return new Date(today.setDate(first));
       }
-     
+
+      var get_now = function() {
+        const today = new Date();
+        const h = today.getHours();
+        const m = today.getMinutes();
+        return (h <= 9 ? '0' + h : h) + ":" + (m <= 9 ? '0' + m : m)
+      }
      
       show_week(dateToYMD(get_monday()));
 
@@ -310,25 +445,7 @@
           'end': $('#end').val(),
         }
 
-
-        $.ajax({
-          url: "/api/update",
-          type: "put",
-          dataType: "json",
-          contentType: "application/json",
-          data: JSON.stringify(time_spent),
-          success: function (data) {
-            show_time_spent(time_spent);
-            remove_time_spent(time_spent.id);
-            schedule.push(time_spent)
-            $('#exampleModal').modal('hide');
-          },
-          error: function (data) {
-            console.log("error", data);
-          }
-        });
-
-
+        send_time_spent(time_spent);
 
       })
 
@@ -350,6 +467,7 @@
             $('#' + time_spent_id).remove();
             remove_time_spent(time_spent_id);
             $('#exampleModal').modal('hide');
+            update_calculation();
           },
           error: function (data) {
             console.log("error", data);
@@ -383,6 +501,21 @@
         
         ev.preventDefault();
         show_week(dateToYMD(get_monday()));
+
+      });
+
+      $("#dayStart").click( function (ev) {
+        
+        ev.preventDefault();
+        $(this).find('span').text(get_now());
+        send_startstop();
+
+      });
+      $("#dayStop").click( function (ev) {
+        
+        ev.preventDefault();
+        $(this).find('span').text(get_now());
+        send_startstop();
 
       });
 

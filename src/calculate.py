@@ -53,3 +53,19 @@ def adv_hours(minutes):
     rest = minutes - h * 60
     v = round(rest / 15)
     return h + v * 0.25
+
+def calculate_statistic(data):
+    days = dataset_to_dict(data)
+    statistic = {}
+    for day in sorted(days):
+        base , spents = split_dataset(days[day])
+        minutes = calculate(base,spents)
+        stat = { "sum" : 0 , "part" : {}}
+        for m in minutes:
+            if m == "break": continue;
+            if m.startswith("prj"):
+                ah = adv_hours(minutes[m])
+                stat['sum'] += ah
+                stat['part'][m] = ah
+        statistic[day] = stat
+    return statistic

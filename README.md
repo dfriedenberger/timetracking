@@ -18,5 +18,9 @@ python server.py
 ```
 
 ```
+python dump.py
+```
+
+```
 docker-compose up
 ```

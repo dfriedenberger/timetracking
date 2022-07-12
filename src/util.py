@@ -21,3 +21,4 @@ def delete_by_id(data,id):
     for i in range(len(data)):
         if id == data[i]['id']:
             del data[i]
+            return
