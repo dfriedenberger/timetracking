@@ -1,0 +1,18 @@
+
+.day {
+    position: relative;
+    background-color: rgba(255, 99, 132, 0.2);
+    border: 1px solid rgba(255, 99, 132, 1);
+    width: 100%;
+    cursor: pointer; 
+    height: 550px;
+}
+
+.project {
+    position: absolute;
+    left: 0px;
+    width: 100%;
+    background-color: rgba(255, 159, 64, 0.5);
+    border: 1px solid rgba(255, 159, 64, 1);
+    cursor: pointer; 
+}

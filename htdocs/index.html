@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timetable</title>
+  <link href="css/timetable.css" rel="stylesheet">
+  <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
+</head>
+
+<body>
+
+
+  <script id="day-template" type="text/x-handlebars">
+      <div class="col day" data-date="{{data-date}}">
+          <p>{{date}}</p>
+      </div>
+  </script>
+
+  <script id="project-template" type="text/x-handlebars">
+        <div class="project" id="{{id}}">{{project}}</div>
+  </script>
+
+  <script id="form-project-template" type="text/x-handlebars">
+      <form>
+          <div class="row">
+            <input type="hidden" id="id" value="{{id}}">
+            <div class="col">
+              <select id="project" class="form-select">
+                {{{options}}}
+              </select>
+            </div>
+            <div class="col">
+              <input type="text" id="date" class="form-control" placeholder="YYYY-MM-DD" value="{{date}}">
+            </div>
+          </div>
+          <div class="row">
+              <div class="col-3">
+                <input type="text" id="start" class="form-control" placeholder="HH:MM" value="{{start}}">
+              </div>
+              <div class="col-3">
+                <input type="text" id="end" class="form-control" placeholder="HH:MM" value="{{end}}">
+              </div>
+          </div>
+      </form>
+    </script>
+
+  <h1>Stundenprotokollierung</h1>
+
+  <div class="container">
+    <div class="buttoms">
+      <button type="button" id="beforeWeek" class="btn btn-primary"><i class="bi bi-caret-left-fill"></i></button>
+      <button type="button" id="nextWeek" class="btn btn-primary"><i class="bi bi-caret-right-fill"></i></button>
+      <button type="button" id="thisWeek" class="btn btn-primary"><i class="bi bi-calendar-event-fill"></i></i></button>
+      
+    </div>
+
+    <div id="table" class="row">
+    </div>
+
+  </div>
+
+
+  <!-- Modal -->
+  <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          ...
+        </div>
+        <div class="modal-footer">
+          <button id="delete" type="button" class="btn btn-danger"><i class="bi bi-trash-fill"></i> Entfernen</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbruch</button>
+          <button id="save" type="button" class="btn btn-primary">Ok</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="node_modules/handlebars/dist/handlebars.min.js"></script>
+
+  <script>
+    $(document).ready(function () {
+
+      var sourceDayTemplate = document.getElementById("day-template").innerHTML;
+      var dayTemplate = Handlebars.compile(sourceDayTemplate);
+
+      var sourceProjectTemplate = document.getElementById("project-template").innerHTML;
+      var projectTemplate = Handlebars.compile(sourceProjectTemplate);
+
+      var sourceFormProjectTemplate = document.getElementById("form-project-template").innerHTML;
+      var formProjectTemplate = Handlebars.compile(sourceFormProjectTemplate);
+
+
+      //Projects
+      var projects = undefined;
+
+      $.ajax({
+        dataType: "json",
+        url: 'api/projects',
+        async: false,
+        success: function (data) {
+          projects = data;
+        },
+        error: function (data) {
+          console.log("error", data);
+        }
+      });
+
+      var get_project = function (project_id) {
+        var ix = projects.map(p => p.id).indexOf(project_id);
+        if (ix < 0) return undefined;
+        return projects[ix];
+      }
+
+      var get_options = function (project) {
+        var options = "";
+        for (var i = 0; i < projects.length; i++)
+          options += '<option value="' + projects[i].id + '"' + (projects[i].id == project ? " selected" : "") + '>' + projects[i].name + '</option>';
+        return options;
+      }
+
+
+      //Schedule
+      var schedule = undefined;
+      $.ajax({
+        dataType: "json",
+        url: 'api/schedule',
+        async: false,
+        success: function (data) {
+          schedule = data;
+        },
+        error: function (data) {
+          console.log("error", data);
+        }
+      });
+
+
+      var find_time_spent = function (id) {
+        var ix = schedule.map(p => p.id).indexOf(id);
+        if (ix < 0) return undefined;
+        return schedule[ix];
+      };
+
+      var remove_time_spent = function (time_spent_id) {
+
+        var filtered = schedule.filter(function(time_spent, index, arr){ 
+          return time_spent_id != time_spent.id;
+        });
+
+      };
+
+
+      var random_id = function () {
+        return "x" + Math.floor(Math.random() * 1000000000)
+      }
+
+      var show_modal = function (func, id, start, end) {
+
+
+        modal_body = '<p>' + func + ' not found</p>'
+        switch (func) {
+          case 'edit-project':
+            project = find_time_spent(id)
+            options = get_options(project.project);
+            //print() -> Drucken
+            modal_body = formProjectTemplate({ 'id': project.id, 'options': options, 'date': project.date, 'start': project.start, 'end': project.end });
+            break;
+          case 'new-project':
+            options = get_options(projects[0].id);
+            modal_body = formProjectTemplate({ 'id': random_id(), 'options': options, 'date': id, 'start': start, 'end': end }); //TODO get start from pixel
+            break;
+        }
+
+        $('#exampleModal').find('.modal-body').empty();
+        $('#exampleModal').find('.modal-body').append(modal_body);
+        $('#exampleModal').find('.modal-title').text(func + " " + id);
+        $('#exampleModal').modal('show');
+      }
+
+
+      var to_pixel = function (time) {
+        const p = time.split(':');
+        const minutes = parseInt(p[0]) * 60 + parseInt(p[1]) - 6 * 60; //6 Uhr ist start
+
+        return 50 + parseInt((500 * minutes) / ((22 - 6) * 60));  //500px auf 6 Uhr bis 22 Uhr verteilen, +50px Offset
+      }
+
+      var get_time = function (pixel, offset) {
+        const minutes = ((22 - 6) * 60) * ((pixel - 50) / 500) + 6 * 60; //siehe oben
+        var h = Math.round(minutes / 60) + offset;
+        return (h <= 9 ? '0' + h : h) + ":00"
+      }
+
+      var dateToYMD = function (date) {
+        var d = date.getDate();
+        var m = date.getMonth() + 1; //Month from 0 to 11
+        var y = date.getFullYear();
+        return '' + y + '-' + (m <= 9 ? '0' + m : m) + '-' + (d <= 9 ? '0' + d : d);
+      }
+
+      var date_str = function (date) {
+
+        var day = date.getDate();
+        var month = date.getMonth() + 1;
+        var wd = date.getDay();
+
+        const days = [
+          'So',
+          'Mo',
+          'Di',
+          'Mi',
+          'Do',
+          'Fr',
+          'Sa'
+        ]
+        var dayName = days[wd]
+        return `${dayName}, ${day}.${month}`
+
+      }
+
+
+
+
+
+
+      var show_time_spent = function (config) {
+
+        //remove id
+        $('#' + config.id).remove();
+
+        //calulate top and height from config.start and config.end
+        var top = to_pixel(config.start);
+        var height = to_pixel(config.end) - top
+
+        var project = get_project(config.project)
+        time_spent = $(projectTemplate({ 'id': config.id, 'project': project.name }));
+        time_spent.css("top", top + 'px')
+        time_spent.css("height", height + 'px')
+
+        time_spent.click(function (ev) {
+          ev.stopPropagation();
+          show_modal('edit-project', this.id);
+        })
+
+        $("#table").find('.day[data-date=' + config.date + ']').append(time_spent);
+
+      }
+
+      var current = undefined;
+
+      var show_week = function (monday) {
+
+        current = monday;
+        date = new Date(monday);
+
+        $("#table").empty();
+
+        for (var d = 0; d < 7; d++) {
+          var key = dateToYMD(date);
+          var day = $(dayTemplate({ 'date': date_str(date), 'data-date': key }));
+          day.click(function (ev) {
+            ev.stopPropagation();
+            var offset = $(this).offset();
+            var start = get_time(ev.pageY - offset.top, 0);
+            var end = get_time(ev.pageY - offset.top, 1);
+            show_modal('new-project', $(this).data("date"), start, end);
+          });
+          $("#table").append(day);
+
+          //incr Day
+          date.setDate(date.getDate() + 1);
+        }
+
+        //add time spents
+        var ll = schedule.length;
+        for (var i = 0; i < ll; i++) {
+          show_time_spent(schedule[i]);
+        }
+
+      }
+
+      var get_monday = function() {
+        const today = new Date();
+        const first = today.getDate() - today.getDay() + 1;
+        return new Date(today.setDate(first));
+      }
+     
+     
+      show_week(dateToYMD(get_monday()));
+
+      $("#save").click(function (ev) {
+
+        ev.preventDefault();
+
+        var time_spent = {
+          'id': $('#id').val(),
+          'project': $('#project').val(),
+          'date': $('#date').val(),
+          'start': $('#start').val(),
+          'end': $('#end').val(),
+        }
+
+
+        $.ajax({
+          url: "/api/update",
+          type: "put",
+          dataType: "json",
+          contentType: "application/json",
+          data: JSON.stringify(time_spent),
+          success: function (data) {
+            show_time_spent(time_spent);
+            remove_time_spent(time_spent.id);
+            schedule.push(time_spent)
+            $('#exampleModal').modal('hide');
+          },
+          error: function (data) {
+            console.log("error", data);
+          }
+        });
+
+
+
+      })
+
+
+
+      $("#delete").click(function (ev) {
+
+        ev.preventDefault();
+
+        var time_spent_id = $('#id').val();
+
+
+        $.ajax({
+          url: "/api/delete/"+time_spent_id,
+          type: "get",
+         
+          success: function (data) {
+            //remove id
+            $('#' + time_spent_id).remove();
+            remove_time_spent(time_spent_id);
+            $('#exampleModal').modal('hide');
+          },
+          error: function (data) {
+            console.log("error", data);
+          }
+        });
+
+
+
+      })
+
+
+      $("#beforeWeek").click( function (ev) {
+        
+        ev.preventDefault();
+        var d = new Date(current);
+        d.setDate(d.getDate() - 7);
+        show_week(dateToYMD(d));
+
+      });
+
+      $("#nextWeek").click( function (ev) {
+        
+        ev.preventDefault();
+        var d = new Date(current);
+        d.setDate(d.getDate() + 7);
+        show_week(dateToYMD(d));
+
+      });
+
+      $("#thisWeek").click( function (ev) {
+        
+        ev.preventDefault();
+        show_week(dateToYMD(get_monday()));
+
+      });
+
+    });
+  </script>
+
+</body>
+
+</html>

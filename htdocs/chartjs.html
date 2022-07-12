@@ -1,0 +1,76 @@
+<html>
+
+
+
+<body>
+    <canvas id="myChart" width="400" height="200"></canvas>
+
+
+    <script src="node_modules/chart.js/dist/chart.min.js"></script>
+
+    <script>
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        const labels = ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'];
+
+        const data = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Dataset 1',
+                    data: labels.map((l) => {
+                        console.log(l)
+                        return [10.2, 12.5];
+                    }),
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+
+                },
+                {
+                    label: 'Dataset 2',
+                    data: labels.map((l) => {
+                        console.log(l)
+                        return [8.2, 16.5];
+                    }),
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    yAxisID: 'yId'
+
+                },
+            ]
+        };
+
+
+
+        const config = {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Chart.js Floating Bar Chart'
+                    }
+                },
+                scales: {
+                    yId:         {
+                        reverse: true
+                    }
+                }
+            }
+        };
+
+
+
+        const myChart = new Chart(ctx, config);
+    </script>
+
+
+
+</body>
+
+</html>
