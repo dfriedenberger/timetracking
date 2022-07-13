@@ -9,10 +9,12 @@ for day in sorted(statistic):
     print(day)
     stat = statistic[day]
 
-    for p in stat['part']:
-        print("",p,stat['part'][p],"h")
-    print("","sum",stat['sum'],"h")
-
+    if stat['status'] == "Ok":
+        for p in stat['part']:
+            print("",p,stat['part'][p],"h")
+        print("","sum",stat['sum'],"h")
+    else:
+        print(stat)
 
 
 

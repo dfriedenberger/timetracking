@@ -1,8 +1,8 @@
 
 .day {
     position: relative;
-    background-color: rgba(255, 99, 132, 0.2);
-    border: 1px solid rgba(255, 99, 132, 1);
+    background-color: rgba(240, 240, 240, 0.2);
+    border: 1px solid rgba(240, 240, 240, 1);
     width: 100%;
     cursor: pointer; 
     height: 550px;
@@ -12,10 +12,41 @@
     position: absolute;
     left: 0px;
     width: 100%;
-    background-color: rgba(255, 159, 64, 0.5);
-    border: 1px solid rgba(255, 159, 64, 1);
+  
     cursor: pointer; 
+    font-size: 12px;
+
 }
+
+/* https://www.color-hex.com/color-palette/1015935 */
+
+.project-orange {
+    background-color: rgba(255,110,33, 0.5);
+    border: 1px solid rgba(255,110,33, 1);
+}
+
+.project-yellow {
+    background-color: rgba(251,246,101, 0.2);
+    border: 1px solid rgba(251,246,101, 1);
+}
+
+.project-mint {
+    background-color: rgba(115,255,254, 0.2);
+    border: 1px solid rgba(115,255,254, 1);
+}
+
+.project-blue {
+    background-color: rgba(98,135,248, 0.2);
+    border: 1px solid rgba(98,135,248, 1);
+}
+
+.project-darkblue {
+    background-color: rgba(56,62,101, 0.2);
+    border: 1px solid rgba(56,62,101, 1);
+}
+
+
+
 
 .calculation {
     position: absolute;
