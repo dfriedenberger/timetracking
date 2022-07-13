@@ -136,7 +136,10 @@
 
       var get_project = function (project_id) {
         var ix = projects.map(p => p.id).indexOf(project_id);
-        if (ix < 0) return undefined;
+        if (ix < 0) {
+          console.log(project_id+" not found");
+          return undefined;
+        }
         return projects[ix];
       }
 
@@ -286,7 +289,10 @@
               "start": "14:00", "end": "15:00",
               "projectid": "spanish", "projectname": "Spanisch"
             });
-
+            modal_body += defaultButtonTemplate({
+              "start": "12:00", "end": "13:00",
+              "projectid": "break", "projectname": "Pause"
+            });
             break;
         }
 
