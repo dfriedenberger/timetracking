@@ -24,3 +24,5 @@ python dump.py
 ```
 docker-compose up -d
 ```
+
+localhost:8888
